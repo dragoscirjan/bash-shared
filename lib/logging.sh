@@ -1,20 +1,26 @@
 #! /bin/bash
-
 # This script provides utility functions for logging and displaying debug, info, warning, and error messages with colored output.
 # The functions use ANSI escape codes to color the text for better visibility.
 # The Greek letter lambda (λ) is used as a prefix to distinguish log messages.
-
 # lambda (λ) symbol used as a prefix for all log messages
 lambda=λ
 
-log() {
+###########################################
+# do_log()
+# Prints an informational message in the specified color.
+# Arguments:
+#   $1 - The message to display. If empty, reads from standard input.
+# Output:
+#   An informational message is printed in the specified color.
+###########################################
+do_log() {
   # Print the informational message in $COLOR color
-  if [[ -z "$1"]]; then
-    while read line; do
-      echo -e "$COLOR$lambda INFO $line\033[0m" >&2
+  if [[ -z "$1" ]]; then
+    while read -r l; do
+      printf "${COLOR}${lambda} INFO %s\e[0m\n" "${l}"
     done
   else
-    echo -e "$COLOR$lambda INFO $1\033[0m" >&2
+    printf "${COLOR}${lambda} INFO %s\e[0m\n" "${1}"
   fi
 }
 
@@ -26,9 +32,12 @@ log() {
 # Output:
 #   A blue debug message is printed to STDERR if debugging is enabled.
 ###########################################
-debug() {
+do_debug() {
   # Check if the DEBUG variable is non-empty
-  [[ -n "$DEBUG" ]] && echo -e "\033[0;34m$lambda DEBUG $1\033[0m" >&2
+  [[ -n "$DEBUG" ]] && {
+    COLOR="\033[0;34m"
+    do_log "$1"
+  }
 }
 
 ###########################################
@@ -39,9 +48,10 @@ debug() {
 # Output:
 #   A red error message is printed to STDERR, and the script exits with status 1.
 ###########################################
-error() {
+do_error() {
   # Print the error message in red and exit
-  echo -e "\033[0;31m$lambda ERROR $1\033[0m" >&2
+  COLOR="\033[0;31m"
+  do_log "$1" >&2
   exit 1 # Exit the script with a status code of 1 (indicating an error)
 }
 
@@ -53,15 +63,10 @@ error() {
 # Output:
 #   A green info message is printed to STDERR.
 ###########################################
-info() {
+do_info() {
   # Print the informational message in green
-  if [[ -z "$1"]]; then
-    while read line; do
-      echo -e "\033[0;32m$lambda INFO $line\033[0m" >&2
-    done
-  else
-    echo -e "\033[0;32m$lambda INFO $1\033[0m" >&2
-  fi
+  COLOR="\033[0;32m"
+  do_log "$1"
 }
 
 ###########################################
@@ -72,7 +77,8 @@ info() {
 # Output:
 #   A yellow warning message is printed to STDERR.
 ###########################################
-warn() {
+do_warn() {
   # Print the warning message in yellow
-  echo -e "\033[1;33m$lambda WARN $1\033[0m" >&2
+  COLOR="\033[0;33m"
+  do_log "$1" >&2
 }
