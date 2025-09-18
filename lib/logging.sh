@@ -1,84 +1,118 @@
-#! /bin/bash
-# This script provides utility functions for logging and displaying debug, info, warning, and error messages with colored output.
+#!/bin/bash
+
+# Logging utilities for shell scripts
+# Provides utility functions for logging and displaying debug, info, warning, 
+# and error messages with colored output.
 # The functions use ANSI escape codes to color the text for better visibility.
 # The Greek letter lambda (λ) is used as a prefix to distinguish log messages.
-# lambda (λ) symbol used as a prefix for all log messages
-lambda=λ
+#
+# Follows Google Bash Style Guide: https://google.github.io/styleguide/shellguide.html
 
-###########################################
-# do_log()
-# Prints an informational message in the specified color.
+# Since this file is sourced, don't use set -euo pipefail as it affects the parent script
+
+# Color constants
+readonly LOG_COLOR_BLUE="\033[0;34m"
+readonly LOG_COLOR_RED="\033[0;31m"
+readonly LOG_COLOR_GREEN="\033[0;32m"
+readonly LOG_COLOR_YELLOW="\033[0;33m"
+readonly LOG_COLOR_RESET="\e[0m"
+
+# Lambda symbol used as prefix for all log messages
+readonly LOG_PREFIX="λ"
+
+#######################################
+# Internal logging function that prints a message with specified color.
+# Should not be called directly - use the specific log level functions instead.
+# Globals:
+#   None
 # Arguments:
-#   $1 - The message to display. If empty, reads from standard input.
-# Output:
-#   An informational message is printed in the specified color.
-###########################################
-do_log() {
-  # Print the informational message in $COLOR color
-  if [[ -z "$1" ]]; then
-    while read -r l; do
-      printf "${COLOR}${lambda} INFO %s\e[0m\n" "${l}"
-    done
-  else
-    printf "${COLOR}${lambda} INFO %s\e[0m\n" "${1}"
-  fi
+#   $1 - Color code for the message
+#   $2 - Log level (DEBUG, INFO, WARN, ERROR)
+#   $3 - The message to display. If empty, reads from stdin.
+# Outputs:
+#   Colored log message to stdout or stderr
+#######################################
+_log_with_color() {
+    local color="$1"
+    local level="$2"
+    local message="${3:-}"
+
+    if [[ -z "${message}" ]]; then
+        while IFS= read -r line; do
+            printf "${color}${LOG_PREFIX} %s %s${LOG_COLOR_RESET}\n" "${level}" "${line}"
+        done
+    else
+        printf "${color}${LOG_PREFIX} %s %s${LOG_COLOR_RESET}\n" "${level}" "${message}"
+    fi
 }
 
-###########################################
-# debug()
-# Prints a debug message in blue if the DEBUG variable is set.
+#######################################
+# Prints a debug message in blue if DEBUG environment variable is set.
+# Globals:
+#   DEBUG - If set, enables debug output
 # Arguments:
-#   $1 - The debug message to display.
-# Output:
-#   A blue debug message is printed to STDERR if debugging is enabled.
-###########################################
-do_debug() {
-  # Check if the DEBUG variable is non-empty
-  [[ -n "$DEBUG" ]] && {
-    COLOR="\033[0;34m"
-    do_log "$1"
-  }
+#   $1 - The debug message to display
+# Outputs:
+#   Blue debug message to stderr if debugging is enabled
+#######################################
+log_debug() {
+    if [[ -n "${DEBUG:-}" ]]; then
+        _log_with_color "${LOG_COLOR_BLUE}" "DEBUG" "$1" >&2
+    fi
 }
 
-###########################################
-# error()
-# Prints an error message in red and exits the script with a non-zero status.
-# Arguments:
-#   $1 - The error message to display.
-# Output:
-#   A red error message is printed to STDERR, and the script exits with status 1.
-###########################################
-do_error() {
-  # Print the error message in red and exit
-  COLOR="\033[0;31m"
-  do_log "$1" >&2
-  exit 1 # Exit the script with a status code of 1 (indicating an error)
-}
-
-###########################################
-# info()
+#######################################
 # Prints an informational message in green.
+# Globals:
+#   None
 # Arguments:
-#   $1 - The info message to display.
-# Output:
-#   A green info message is printed to STDERR.
-###########################################
-do_info() {
-  # Print the informational message in green
-  COLOR="\033[0;32m"
-  do_log "$1"
+#   $1 - The info message to display
+# Outputs:
+#   Green info message to stdout
+#######################################
+log_info() {
+    _log_with_color "${LOG_COLOR_GREEN}" "INFO" "$1"
 }
 
-###########################################
-# warn()
+# Alias for backwards compatibility
+log() {
+    log_info "$@"
+}
+
+#######################################
 # Prints a warning message in yellow.
+# Globals:
+#   None
 # Arguments:
-#   $1 - The warning message to display.
-# Output:
-#   A yellow warning message is printed to STDERR.
-###########################################
-do_warn() {
-  # Print the warning message in yellow
-  COLOR="\033[0;33m"
-  do_log "$1" >&2
+#   $1 - The warning message to display
+# Outputs:
+#   Yellow warning message to stderr
+#######################################
+log_warn() {
+    _log_with_color "${LOG_COLOR_YELLOW}" "WARN" "$1" >&2
+}
+
+#######################################
+# Prints an error message in red and exits the script.
+# Globals:
+#   None
+# Arguments:
+#   $1 - The error message to display
+#   $2 - Exit code (optional, defaults to 1)
+# Outputs:
+#   Red error message to stderr
+# Exits:
+#   With specified exit code (default 1)
+#######################################
+log_error() {
+    local message="$1"
+    local exit_code="${2:-1}"
+
+    _log_with_color "${LOG_COLOR_RED}" "ERROR" "${message}" >&2
+    exit "${exit_code}"
+}
+
+# Alias for backwards compatibility
+error_exit() {
+    log_error "$@"
 }
